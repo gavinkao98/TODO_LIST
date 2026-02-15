@@ -139,18 +139,23 @@
         }
         
         updateDateAndCountdown();
-        setInterval(updateDateAndCountdown, 60000); // 每分鐘更新一次
-
+        setInterval(updateDateAndCountdown, 60000); 
 
         function getCurrentWeekID() {
-            const date = new Date();
-            date.setHours(0, 0, 0, 0);
-            date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-            const week1 = new Date(date.getFullYear(), 0, 4);
-            const weekNumber = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-            return `${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
+            const d = new Date();
+
+            const dayNum = d.getDay() || 7; 
+            d.setHours(0, 0, 0, 0);
+
+            d.setDate(d.getDate() + 4 - dayNum);
+            const year = d.getFullYear();
+            const startOfYear = new Date(year, 0, 1);
+
+            const weekNo = Math.ceil((((d - startOfYear) / 86400000) + 1) / 7);
+            return `${year}-W${weekNo.toString().padStart(2, '0')}`;
         }
         const currentWeekID = getCurrentWeekID();
+        console.log("Current Week ID:", currentWeekID); // 用於除錯
 
         onValue(tasksRef, (snapshot) => {
             const msgDiv = document.getElementById('status-msg');
@@ -171,6 +176,7 @@
                 ...data[key]
             }));
 
+
             const tasksToShow = tasks.filter(task => {
                 const isCurrentWeek = task.weekId === currentWeekID;
                 const isPastUnfinished = (task.weekId < currentWeekID) && !task.done;
@@ -178,11 +184,23 @@
             });
 
             if (tasksToShow.length === 0) {
-                msgDiv.innerText = "本週任務已全數完成 🎉";
+                msgDiv.innerText = "太棒了！所有任務皆已完成 🎉";
                 msgDiv.style.display = 'block';
             }
 
-            tasksToShow.sort((a, b) => a.done - b.done);
+
+            tasksToShow.sort((a, b) => {
+
+                if (a.done !== b.done) {
+                    return a.done - b.done; 
+                }
+                
+
+                if (a.weekId !== b.weekId) {
+                    return b.weekId.localeCompare(a.weekId);
+                }
+                return b.createdAt - a.createdAt; 
+            });
 
             tasksToShow.forEach(task => {
                 const li = document.createElement('li');
